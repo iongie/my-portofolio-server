@@ -12,41 +12,48 @@ const { start } = require('repl');
 
 // TODO: Setup Port
 const port = 443; //! for production;
-const portDev = 3000; //! for development;
+const portDev = 80; //! for development;
 
 class Server {
 
     constructor() {
+        this.proxy();
+        this.server();
         this.initView();
         this.router();
-        // this.proxy();
         this.initExpressMiddleware();
-        this.server();
     }
 
     server(){
         // TODO: Setup Server (Production)
-        // const server = https.createServer({
-        //   key: fs.readFileSync('/etc/letsencrypt/live/gigihsantoso.id/privkey.pem', 'utf8'),
-        //   cert: fs.readFileSync('/etc/letsencrypt/live/gigihsantoso.id/cert.pem', 'utf8'),
-        //   ca: fs.readFileSync('/etc/letsencrypt/live/gigihsantoso.id/chain.pem', 'utf8'),
-        //   fullChain: fs.readFileSync('/etc/letsencrypt/live/gigihsantoso.id/fullchain.pem', 'utf8'),
-        // }, app)
-        // .listen(port, function () {
-        //   console.log('Example app listening on port 443! Go to https://gigihsantoso.id/')
-        // })
+        const server = https.createServer({
+          key: fs.readFileSync('/etc/letsencrypt/live/www.gigihsantoso.id/privkey.pem', 'utf8'),
+          cert: fs.readFileSync('/etc/letsencrypt/live/www.gigihsantoso.id/cert.pem', 'utf8'),
+          ca: fs.readFileSync('/etc/letsencrypt/live/www.gigihsantoso.id/chain.pem', 'utf8'),
+          fullChain: fs.readFileSync('/etc/letsencrypt/live/www.gigihsantoso.id/fullchain.pem', 'utf8'),
+        }, app)
+        .listen(port, function () {
+          console.log('Example app listening on port 443! Go to https://gigihsantoso.id/')
+        })
 
         // TODO: Setup Server (Development)
-        const server = app.listen(portDev, () => console.log(`Hello world app listening on port ${portDev}!`));
+        const servers = app.listen(portDev, () => console.log(`Hello world app listening on port ${portDev}!`));
         // TODO: Socket Setup
         app.io = socket(server, { serveClient: false });
+        app.io = socket(servers, { serveClient: false });
     }
 
     proxy() {
         app.enable("trust proxy");
-        app.use(function(request, response){
-            if(!request.secure){
-            response.redirect("https://" + request.headers.host + request.url);
+        app.use(function(req, res, next){
+            if (req.secure) {
+                // request was via https, so do no special handling
+                console.log('http');
+                next();
+            } else {
+                    // request was via http, so redirect to https
+                    console.log('https');
+                    res.redirect('https://' + req.headers.host + req.url);
             }
         });
     }
